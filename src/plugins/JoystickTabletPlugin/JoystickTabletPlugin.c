@@ -59,7 +59,7 @@ static sqInt (*integerValueOf)(sqInt oop);
 static sqInt (*isIntegerObject)(sqInt objectPointer);
 #endif
 static sqInt (*methodReturnValue)(sqInt oop);
-static sqInt (*positive32BitIntegerFor)(unsigned int integerValue);
+static sqInt (*positive32BitIntegerFor)(sqInt integerValue);
 static sqInt (*primitiveFailFor)(sqInt reasonCode);
 static sqInt (*stackValue)(sqInt offset);
 static sqInt (*success)(sqInt aBoolean);
@@ -75,7 +75,7 @@ extern sqInt integerValueOf(sqInt oop);
 extern sqInt isIntegerObject(sqInt objectPointer);
 #endif
 extern sqInt methodReturnValue(sqInt oop);
-extern sqInt positive32BitIntegerFor(unsigned int integerValue);
+extern sqInt positive32BitIntegerFor(sqInt integerValue);
 extern sqInt primitiveFailFor(sqInt reasonCode);
 extern sqInt stackValue(sqInt offset);
 extern sqInt success(sqInt aBoolean);

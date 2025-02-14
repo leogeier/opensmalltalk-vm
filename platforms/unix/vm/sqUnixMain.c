@@ -75,6 +75,9 @@
 
 #undef	DEBUG_MODULES
 
+extern struct SqModule sound_null;
+extern struct SqModule display_null;
+
 #ifdef MUSL
 void
 pushOutputFile(char *fileNameOrStdioIndex)
@@ -118,7 +121,7 @@ static int    noEvents=		0;	/* 1 to disable new event handling */
        int    noSoundMixer=	0;	/* 1 to disable writing sound mixer levels */
        char  *squeakPlugins=	0;	/* plugin path */
        int    runAsSingleInstance=0;
-       int    withSpy=		0;
+       /* int    withSpy=		0; */
 
        int    uxDropFileCount=	0;	/* number of dropped items	*/
        char **uxDropFileNames=	0;	/* dropped filenames		*/
@@ -2170,7 +2173,11 @@ imgInit(void)
 #endif
 
 int
+#if BUILD_AS_LIB == 1
+run_squeak(int argc, char **argv, char **envp)
+#else
 main(int argc, char **argv, char **envp)
+#endif
 {
   /* check the interpreter's size assumptions for basic data types */
   if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
@@ -2232,8 +2239,10 @@ main(int argc, char **argv, char **envp)
     modules= &vm_Module;
   vm_Module.parseEnvironment();
   parseArguments(argc, argv);
-  if ((!dpy) || (!snd))
-    loadModules();
+  dpy = display_null.makeInterface();
+  snd = sound_null.makeInterface();
+  /* if ((!dpy) || (!snd)) */
+  /*   loadModules(); */
 #if !DEBUG
   sqIgnorePluginErrors= 0;
 #endif
