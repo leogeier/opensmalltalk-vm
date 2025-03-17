@@ -383,7 +383,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 /* This lives here for now but belongs somewhere else.
  * platforms/Cross/vm/sqStuff.c??
  */
-#ifndef MUSL
+#if !defined(MUSL) && !defined(__ANDROID__)
 #define STDOUT_STACK_SZ 5
 static int stdoutStackIdx = -1;
 static FILE stdoutStack[STDOUT_STACK_SZ];
@@ -411,7 +411,7 @@ fopen_for_append(char *filename)
 # define fopen_for_append(filename) fopen(filename,"a+")
 #endif
 
-#ifndef MUSL
+#if !defined(MUSL) && !defined(__ANDROID__)
 void
 pushOutputFile(char *filenameOrStdioIndex)
 {
@@ -461,6 +461,9 @@ popOutputFile()
 	}
 	*stdout = stdoutStack[stdoutStackIdx--];
 }
+#else
+void pushOutputFile(char *filenameOrStdioIndex) {}
+void popOutputFile() {}
 #endif
 
 void

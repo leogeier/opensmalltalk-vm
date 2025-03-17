@@ -54,6 +54,12 @@ struct VirtualMachine* interpreterProxy;
 #define IsAlignedPowerOfTwo(value, modulus) \
   (((value) & ((modulus) - 1)) == 0)
 
+void* valloc(size_t size) {
+    return memalign(sysconf(_SC_PAGESIZE),size);
+//#warning "It might be necessary to use memalign here"
+//    return malloc(size);
+}
+
 /*
  * Call a foreign function to set x8 structure result address return register
  */

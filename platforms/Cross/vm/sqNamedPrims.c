@@ -471,7 +471,9 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	// Interpret a tagged pointer as a short-hand for an internal plugin
 	// e.g. the SqueakFFIPrims module as an internal plugin where access to
 	// the test functions is required.
-	if (((sqInt)moduleHandle & 1))
+    // NOTE: It seems that we don't need this code path (at least for our purposes).
+    // However, since it is broken on Android (different module handle format), we just ignore it.
+	if (false && ((sqInt)moduleHandle & 1))
 		return findInternalFunctionIn
 					(functionName, 
 					&(((ModuleEntry *)((sqInt)moduleHandle - 1))->name[0])
