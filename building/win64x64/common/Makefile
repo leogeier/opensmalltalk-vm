@@ -179,22 +179,22 @@ init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe build
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGF build deps
 
 cleanmt:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmt
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTF buildmt deps
 
 cleanast:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe buildast
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGA buildast deps
 
 cleanmtast:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmtast
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTA buildmtast deps
 
 cleandbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe builddbg
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGD builddbg deps
 
 cleanmtdbg:
-	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmtdbg
+	rm -rf sqNamedPrims.h mkNamedPrims.* LOGTD buildmtdbg deps
 
 nukelibs:
 	rm $(LIBS)
@@ -256,13 +256,13 @@ vm:	$(VMEXE)
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
 
 ifneq ($STRIPEXE,)
@@ -331,12 +331,12 @@ $(BUILD)/fdlibm/libm.a:
 include ../common/Makefile.rules
 
 $(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) -i $(VM).rc -o $(OBJDIR)/$@
+	$(RC) $(RCFLAGS) -i $(VM).rc -o $@
 	$(CP) $(VM).exe.manifest $(OBJDIR)
 	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 resource.o:	$(VMRES)
-	$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
+	$(RC) $(RCFLAGS) -i $< -o $@
 
 #############################################################################
 # Extra specific dependencies

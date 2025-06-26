@@ -31,7 +31,15 @@ ARMul_State*	lastCPU = NULL;
 static char	gdb_log[LOGSIZE+1];
 static int	gdblog_index = 0;
 
-uintptr_t	minReadAddress, minWriteAddress;
+// we should be able to link these against the gdbarm32 static libraries but at least on
+// macos with clang 14 linking the GdbARMPlugin objects against the gdbarm32 static libraries
+// when producing a bundle produces duplicate symbols so use a large hammer, setMinAddresses below.
+
+uintptr_t    minReadAddress, minWriteMaxExecuteAddress;
+
+extern void setMinAddresses(uintptr_t mra, uintptr_t mwa);
+
+uintptr_t	minReadAddress, minWriteMaxExecuteAddress;
 
 /* The interrupt check chain is a convention wherein functions wanting to be
  * called on interrupt check chain themselves together by remembering the head
@@ -90,6 +98,7 @@ resetCPU(void *cpu)
 	return 0;
 }
 
+// See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 static inline long
 runOnCPU(ARMul_State *cpu, void *memory, 
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
@@ -101,7 +110,8 @@ runOnCPU(ARMul_State *cpu, void *memory,
 	cpu->MemDataPtr = (unsigned char *)memory;
 	cpu->MemSize = byteSize;
 	minReadAddress = minAddr;
-	minWriteAddress = minWriteMaxExecAddr;
+	minWriteMaxExecuteAddress = minWriteMaxExecAddr;
+	setMinAddresses(minReadAddress,minWriteMaxExecuteAddress);
 
 	gdblog_index = 0;
 
@@ -128,6 +138,7 @@ ARMul_Emulate26 (ARMul_State * state)
 	return state->Reg[15];
 }
 
+// See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 long
 singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
@@ -135,6 +146,7 @@ singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoInstr);
 }
 
+// See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 long
 runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
@@ -170,34 +182,34 @@ gdb_log_printf(void *stream, const char *format, ...)
 }
 
 long
-disassembleForAtInSize(void *cpu, uintptr_t laddr,
-			void *memory, uintptr_t byteSize)
+disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
+			void *memory, uintptr_t byteSize, int printAddress)
 {
+	disassemble_info dis;
+
 	gdblog_index = 0;
 	// ignore the cpu
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	disassemble_info *dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
 	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
-	init_disassemble_info ( dis, NULL, gdb_log_printf);
+	init_disassemble_info( &dis, NULL, gdb_log_printf);
 
-	dis->arch = bfd_arch_arm;
-	dis->mach = bfd_mach_arm_unknown;
+	dis.arch = bfd_arch_arm;
+	dis.mach = bfd_mach_arm_unknown;
 
 	// sets some fields in the structure dis to architecture specific values
-	disassemble_init_for_target( dis );
+	disassemble_init_for_target( &dis );
 
-	dis->buffer_vma = 0;
-	dis->buffer = memory;
-	dis->buffer_length = byteSize;
+	if (printAddress)
+		gdb_log_printf( NULL, "%08lx: ", laddr);
 
-	// first print the address
-	gdb_log_printf( NULL, "%08lx: ", laddr);
+	dis.buffer_vma = 0;
+	dis.buffer = memory;
+	dis.buffer_length = byteSize;
 	//other possible functions are listed in opcodes/dissassemble.c
-	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
+	unsigned int size = print_insn_little_arm((bfd_vma) laddr, &dis);
 
-	free(dis);
 	gdb_log[gdblog_index+1] = 0;
 
 	return size;
