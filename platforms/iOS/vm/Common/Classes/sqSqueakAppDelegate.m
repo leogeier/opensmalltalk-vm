@@ -127,10 +127,10 @@ void *runBlock(void *arg) {
 }
 
 - (void)runBlockOnMainThread:(void (^)(void))block {
-	if ([NSThread isMainThread])
+	/* if ([NSThread isMainThread]) */
 		block(); // If we are already on the main thread, execute the block directly
-	else // If we are not on the main thread, dispatch the block to the main queue
-		dispatch_sync(dispatch_get_main_queue(), block);
+	/* else // If we are not on the main thread, dispatch the block to the main queue */
+		/* dispatch_sync(dispatch_get_main_queue(), block); */
 }
 
 - (void)runBlockAsyncOnMainThread:(void (^)(void))block {

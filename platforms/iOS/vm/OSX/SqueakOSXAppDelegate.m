@@ -93,7 +93,8 @@ sqOSThread guiThread;
 		if (self.dragItems && [self.dragItems count] > 0)
 			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: [self.dragItems count]];
 #endif // TerfVM
-		[self workerThreadStart];
+	   [self singleThreadStart];
+		/* [self workerThreadStart]; */
 	}
 
 #ifdef PharoVM
