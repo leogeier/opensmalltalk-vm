@@ -264,7 +264,7 @@ add_extra_sources(
 #  "src/spur64.cog/gcc3x-cointerp.c" # ======= COG
 #  "src/spur64.cog/cogit.c" # ======= COG
   # Generated
-  "../include/version.c")
+  "include/version.c")
 
 if(VM_KIND STREQUAL STACK)
   add_extra_sources("src/spur64.stack/gcc3x-interp.c")
