@@ -2269,6 +2269,8 @@ main(int argc, char **argv, char **envp)
   parseArguments(argc, argv);
   dpy = display_null.makeInterface();
   snd = sound_null.makeInterface();
+  soundModule = &sound_null;
+  displayModule = &display_null;
   /* if ((!dpy) || (!snd)) */
   /*   loadModules(); */
 #if !DEBUG
