@@ -95,9 +95,26 @@ extern char *getlog(long *len);
 extern void storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState);
 
 /*
- * We should be able to link variables in the plugins into code in the static libraries
- * implementing the processor simulations. But at least on macos with clang 14 linking
- * the GdbARMPlugin objects against the gdb arm32 static libraries when producing a bundle
- * produces duplicate symbols so use this large hammer, setMinAddresses.
+ * Answer the range of double-precision floating-point registers in use,
+ * starting at the first. So if the only 5th dpfp register is zero the answer is 5.
  */
-extern void setMinAddresses(uintptr_t mra, uintptr_t mwa);
+extern int fpRegHighTide(void *cpu);
+
+/*
+ * Fill a 64-bit integer array as per storeIntegerRegisterStateOfinto followed
+ * by the specified number of double-precision floating-point registers.
+ */
+extern void storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState);
+
+/*
+ * Answer zero if a 64-bit performance counter is available, storing its value
+ * through the pointer if so.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+extern long performanceCounter64ofinto(void *cpu, uintptr_t *perfCounterp);
+
+/*
+ * Answer zero if the 64-bit performance counter could be incremented by increment.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+extern long incrementPerformanceCounter64ofby(void *cpu, uintptr_t increment);

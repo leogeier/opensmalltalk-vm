@@ -23,7 +23,7 @@
 #include <armdefs.h>
 #include <armemu.h>
 
-ARMul_State*	lastCPU = NULL;
+ARMul_State	*lastCPU = NULL;
 
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
@@ -53,7 +53,7 @@ print_state(ARMul_State *state)
 		(state->prog32Sig == HIGHLOW ? "HIGHLOW" : "???")), state->Emulate);
 }
 
-void*
+void *
 newCPU()
 {
 	if (lastCPU == NULL) ARMul_EmulateInit();
@@ -70,7 +70,7 @@ long
 resetCPU(void *cpu)
 {
 	unsigned int i, j;
-	ARMul_State *state = (ARMul_State*) cpu;
+	ARMul_State *state = (ARMul_State *)cpu;
 	// test whether the supplied instance is an ARMul type?
 
 	gdblog_index = 0;
@@ -95,7 +95,7 @@ resetCPU(void *cpu)
 // See comments in platforms/Cross/plugins/ProcessorSimulatorPlugin.h
 static inline long
 runOnCPU(ARMul_State *cpu, void *memory,
-		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State *))
 {
 	assert(lastCPU == cpu);
 
@@ -151,6 +151,37 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 }
 
 /*
+ * Answer if a 64-bit performance counter is available, storing its value through
+ * the pointer if so.
+ */
+long
+performanceCounter64ofinto(void *cpup, uintptr_t *perfCounterp)
+{
+	ARMul_State *cpu = cpup;
+
+	if (lastCPU != cpu)
+		return BadCPUInstance;
+
+	return UnsupportedOperationError;
+}
+
+/*
+ * Answer zero if the 64-bit performance counter could be incremented by increment.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+long
+incrementPerformanceCounter64ofby(void *cpup, uintptr_t increment)
+{
+	ARMul_State *cpu = cpup;
+
+	if (lastCPU != cpu)
+		return BadCPUInstance;
+
+	// rather than fail just ignore it. It allows the image to increment the clock without a platform test
+	return 0;
+}
+
+/*
  * Currently a dummy for ARM Processor Alien.
  */
 void
@@ -168,10 +199,11 @@ gdb_log_printf(void *stream, const char *format, ...)
 	int n;
 	va_start(arg,format);
 
-	if (stream == NULL){
-		n = vsnprintf((char*) (&gdb_log) + gdblog_index, LOGSIZE-gdblog_index, format, arg);
+	if (!stream) {
+		n = vsnprintf((char *)(&gdb_log) + gdblog_index, LOGSIZE-gdblog_index, format, arg);
 		gdblog_index = gdblog_index + n;
-	} else {
+	}
+	else {
 		vfprintf(stream, format, arg);
 	}
 	return 0;
@@ -197,6 +229,12 @@ disassembleForAtInSizePrintAddress(void *cpu, uintptr_t laddr,
 
 		dis.arch = bfd_arch_arm;
 		dis.mach = bfd_mach_arm_unknown;
+		// Choose register names used in disassembly. The default is to use gcc's which uses "sl" for "r10"
+#if 0
+		dis.disassembler_options = "reg-names-std";	// Select register names used in ARM's ISA documentation
+#else
+		dis.disassembler_options = "reg-names-Cog";	// Like std but uses "fp" for "r11"
+#endif
 
 		// sets some fields in the structure dis to architecture specific values
 		disassemble_init_for_target( &dis );
@@ -236,13 +274,27 @@ storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 {
 	for (int n = -1; ++n < 16;)
 		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
-#if 1
 	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
-#else
-	registerState[16] = ((((ARMul_State *)cpu)->NFlag & 1) << 5)
-					  + ((((ARMul_State *)cpu)->ZFlag & 1) << 4)
-					  + ((((ARMul_State *)cpu)->CFlag & 1) << 3)
-					  + ((((ARMul_State *)cpu)->VFlag & 1) << 2)
-					  +  (((ARMul_State *)cpu)->IFFlags & 3);
-#endif
+}
+
+int
+fpRegHighTide(void *cpu)
+{
+	int i = 32; // num fp regs
+	uint64_t *fpregs = &(((ARMul_State *)cpu)->VFP_Reg[0].dword);
+
+	while (i > 0 && !fpregs[i-1]) --i;
+	return i;
+}
+
+void
+storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState)
+{
+	int n;
+
+	for (n = -1; ++n < 16;)
+		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
+	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
+	for(n = -1; ++n < nfpRegs;)
+		registerState[n + 17] = ((ARMul_State *)cpu)->VFP_Reg[n].dword;
 }

@@ -207,22 +207,20 @@ static void closeFramebuffer(void)
 }
 
 
-static void enqueueKeyboardEvent(int key, int up, int modifiers)
+static void enqueueKeyPressEvent(int key, int down, int modifiers)
 {
   DPRINTF("KEY %3d %02x %c %s mod %02x\n",
 	  key, key, ((key > 32) && (key < 127)) ? key : ' ',
-	  up ? "UP" : "DOWN", modifiers);
+	  down ? "DOWN" : "UP", modifiers);
 
   modifierState= modifiers;
-  if (up)
-    {
-      recordKeyboardEvent(key, EventKeyUp, modifiers, key);
-    }
-  else
-    {
-      recordKeyboardEvent(key, EventKeyDown, modifiers, key);
-      recordKeyboardEvent(key, EventKeyChar, modifiers, key);
-    }
+
+ recordKeyboardEvent(key, down == 0 ? EventKeyUp : EventKeyDown, modifiers, key);
+}
+
+static void enqueueKeyCharEvent(int key, int modifiers)
+{
+	recordKeyboardEvent(key, EventKeyChar, modifiers, key);
 }
 
 static void openKeyboard(void)
@@ -547,7 +545,7 @@ static sqInt display_primitivePluginRequestState()	{ return primitiveFail(); }
 static long display_hostWindowClose(long index)                                               { return 0; }
 static long display_hostWindowCreate(long w, long h, long x, long y,
   char *list, long attributeListLength)                                                      { return 0; }
-static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
+static long display_hostWindowShowDisplay(unsigned char *dispBitsIndex, long width, long height, long depth,
   long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)              { return 0; }
 static long display_hostWindowGetSize(long windowIndex)                                       { return -1; }
 static long display_hostWindowSetSize(long windowIndex, long w, long h)                         { return -1; }

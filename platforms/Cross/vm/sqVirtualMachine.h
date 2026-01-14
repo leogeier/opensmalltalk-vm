@@ -7,24 +7,20 @@
 #include "interp.h"
 
 #if SPURVM
-# define VM_VERSION "5.0"
+# define VM_VERSION "7.0"
 #else
-# define VM_VERSION "4.5"
+# define VM_VERSION "4.7"
 #endif
+
+// Functions extending the original struct VirtualMachine are guarded by VM_PROXY_MINOR below
+// We want to clean-up and simplify with VM_PROXY_MAJOR -> 2 asap.
+// VM_PROXY_MAJOR & VM_PROXY_MINOR are properly defined in interp.h
 
 #ifndef VM_PROXY_MAJOR
-/* Increment the following number if you change the order of
-   functions listed or if you remove functions */
 # define VM_PROXY_MAJOR 1
 #endif
-
 #ifndef VM_PROXY_MINOR
-/* Increment the following number if you add functions at the end */
-# if SPURVM
-#	define VM_PROXY_MINOR 13
-# else
-#	define VM_PROXY_MINOR 12
-# endif
+# define VM_PROXY_MINOR 12
 #endif
 
 #include "sqMemoryAccess.h"
@@ -123,7 +119,11 @@ typedef struct VirtualMachine {
 	/* InterpreterProxy methodsFor: 'special objects' */
 
 	sqInt (*characterTable)(void);
-	sqInt (*displayObject)(void);
+#if OLD_FOR_REFERENCE
+	sqInt (*displayObject)(void); // repurposed
+#else /* since there is no legacy plugin problem back to 3.8 we repurpose... */
+	sqInt  (*stackMutableObjectValue)(sqInt offset);
+#endif
 	sqInt (*falseObject)(void);
 	sqInt (*nilObject)(void);
 	sqInt (*trueObject)(void);
@@ -380,6 +380,8 @@ typedef struct VirtualMachine {
   sqInt (*isWordsOrShorts)(sqInt oop);	/* for SoundPlugin et al */
   sqInt (*bytesPerElement)(sqInt oop);	/* for SocketPugin et al */
   sqInt (*fileTimesInUTC)(void);		/* for FilePlugin et al */
+  sqInt (*processOSErrInstVarOffset)(void);	/* for ThreadedFFIPlugin/SqueakFFIPrims */
+  sqInt (*activeProcess)(void);				/* for ThreadedFFIPlugin/SqueakFFIPrims */
 #endif
 } VirtualMachine;
 
@@ -397,6 +399,7 @@ sqInt  pushInteger(sqInt integerValue);
 double stackFloatValue(sqInt offset);
 sqInt  stackIntegerValue(sqInt offset);
 sqInt  stackObjectValue(sqInt offset);
+sqInt  stackMutableObjectValue(sqInt offset);
 sqInt  stackValue(sqInt offset);
 
 /*** variables ***/
@@ -463,6 +466,9 @@ sqInt isOopMutable(sqInt oop);
 sqInt isOopImmutable(sqInt oop);
 
 /* InterpreterProxy methodsFor: 'converting' */
+// N.B. there is no booleanObjectOf because testing a boolean and answering either
+// trueObject() or falseObject() is faster than passing an argument to a function
+// that does the same.
 sqInt  booleanValueOf(sqInt obj);
 sqInt  checkedIntegerValueOf(sqInt intOop);
 sqInt  floatObjectOf(double aFloat);
@@ -602,7 +608,9 @@ sqInt identityHashOf(sqInt);
 sqInt isWordsOrShorts(sqInt);
 sqInt bytesPerElement(sqInt);
 sqInt fileTimesInUTC(void);
+sqInt processOSErrInstVarOffset(void);
 sqInt primitiveFailForwithSecondary(sqInt reasonCode,sqLong extraErrorCode);
+sqInt activeProcess(void);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);

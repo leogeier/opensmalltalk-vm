@@ -8,8 +8,6 @@
 #include <cpu/cpu.h>
 #include <iodev/iodev.h>
 
-#include "sqSetjmpShim.h"
-
 #define min(a,b) ((a)<=(b)?(a):(b))
 
 BOCHSAPI BX_CPU_C bx_cpu;
@@ -54,7 +52,7 @@ static Bit32u         lastValidPC; // for probeIfetch when used by cpu_loop
 		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
 
-		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0)
+		if ((theErrorAcorn = _setjmp(anx64->jmp_buf_env)) != 0)
 			return theErrorAcorn;
 
 		blidx = 0;
@@ -140,7 +138,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
+		if ((theErrorAcorn = _setjmp(anx64->jmp_buf_env)) != 0) {
 			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			return theErrorAcorn;
 		}
@@ -193,6 +191,40 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 			return theErrorAcorn;
 		}
 		return blidx == 0 ? 0 : SomethingLoggedError;
+	}
+
+	/*
+	 * Answer if a 64-bit performance counter is available, storing its value through
+	 * the pointer if so.
+	 */
+	long
+	performanceCounter64ofinto(void *cpu, uintptr_t *perfCounterp)
+	{
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
+
+		if (anx64 != &bx_cpu)
+			return BadCPUInstance;
+
+		*perfCounterp = anx64->timeStampCounter;
+
+		return 0;
+	}
+
+	/*
+	 * Answer zero if the 64-bit performance counter could be incremented by increment.
+	 * Answer an integer error code if and when something went awry (as specified above).
+	 */
+	long
+	incrementPerformanceCounter64ofby(void *cpu, uintptr_t increment)
+	{
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
+
+		if (anx64 != &bx_cpu)
+			return BadCPUInstance;
+
+		anx64->timeStampCounter += increment;
+
+		return 0;
 	}
 
 	/*
@@ -300,6 +332,42 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		registerState[16] = bx_cpu.gen_reg[BX_64BIT_REG_RIP].rrx;
 		registerState[17] = bx_cpu.eflags;
 	}
+
+	int
+	fpRegHighTide(void *cpu)
+	{
+		int i = BX_XMM_REGISTERS;
+
+		while (i > 0 && !bx_cpu.xmm[i-1]._u64[0]) --i;
+		return i;
+	}
+
+	void
+	storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState)
+	{
+		/* N.B. RAX=0,RCX=1,RDX=2,RBX=3,RSP=4,RBP=5,RSI=6,RDI=7 */
+		registerState[0]  = bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx;
+		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
+		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
+		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
+		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
+		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
+		registerState[8]  = bx_cpu.gen_reg[BX_64BIT_REG_R8 ].rrx;
+		registerState[9]  = bx_cpu.gen_reg[BX_64BIT_REG_R9 ].rrx;
+		registerState[10] = bx_cpu.gen_reg[BX_64BIT_REG_R10].rrx;
+		registerState[11] = bx_cpu.gen_reg[BX_64BIT_REG_R11].rrx;
+		registerState[12] = bx_cpu.gen_reg[BX_64BIT_REG_R12].rrx;
+		registerState[13] = bx_cpu.gen_reg[BX_64BIT_REG_R13].rrx;
+		registerState[14] = bx_cpu.gen_reg[BX_64BIT_REG_R14].rrx;
+		registerState[15] = bx_cpu.gen_reg[BX_64BIT_REG_R15].rrx;
+		registerState[16] = bx_cpu.gen_reg[BX_64BIT_REG_RIP].rrx;
+		registerState[17] = bx_cpu.eflags;
+		for(int i = -1; ++i < nfpRegs;)
+			registerState[i + 18] = bx_cpu.xmm[i]._u64[0];
+	}
+
 
 	void
 	probeIfetch(Bit32u ip)

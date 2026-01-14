@@ -198,12 +198,17 @@ extern sqInt interpret(void);  //This is a VM Callback
 	[gDelegateApp runBlockOnMainThread:^{
 		[self doHeadlessSetup];
 		[self setupMenus];
-		[self setupAIO];
 		[self setupBrowserLogic];
 		[self setupSoundLogic];
 		[gDelegateApp makeMainWindow];
 	  }];
 
+	[self setupAIO];
+	if (getVMOSThread()) {
+		assert(getVMOSThread() != guiThread);
+		assert(getVMOSThread() == ioCurrentOSThread());
+	}
+	assert(guiThread != ioCurrentOSThread());
 	interpret();
   }
 }
