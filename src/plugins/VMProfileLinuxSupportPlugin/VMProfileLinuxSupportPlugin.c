@@ -88,7 +88,7 @@ extern sqInt isBytes(sqInt oop);
 extern sqInt methodReturnValue(sqInt oop);
 extern sqInt nilObject(void);
 extern sqInt popRemappableOop(void);
-extern sqInt positive32BitIntegerFor(sqInt integerValue);
+extern sqInt positive32BitIntegerFor(unsigned int integerValue);
 extern sqInt positive64BitIntegerFor(usqLong integerValue);
 extern sqInt primitiveFailFor(sqInt reasonCode);
 extern sqInt pushRemappableOop(sqInt oop);

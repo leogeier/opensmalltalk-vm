@@ -315,7 +315,7 @@ extern sqInt methodReturnReceiver(void);
 extern sqInt methodReturnValue(sqInt oop);
 extern sqInt nilObject(void);
 extern sqInt pop(sqInt nItems);
-extern sqInt positive32BitIntegerFor(sqInt integerValue);
+extern sqInt positive32BitIntegerFor(unsigned int integerValue);
 extern usqInt positive32BitValueOf(sqInt oop);
 extern usqLong positive64BitValueOf(sqInt oop);
 extern sqInt primitiveFail(void);

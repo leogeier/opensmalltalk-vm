@@ -257,7 +257,7 @@ extern sqInt nilObject(void);
 extern sqInt pop(sqInt nItems);
 extern sqInt popthenPush(sqInt nItems, sqInt oop);
 extern sqInt popRemappableOop(void);
-extern sqInt positive32BitIntegerFor(sqInt integerValue);
+extern sqInt positive32BitIntegerFor(unsigned int integerValue);
 extern usqInt positive32BitValueOf(sqInt oop);
 extern sqInt positive64BitIntegerFor(usqLong integerValue);
 extern usqLong positive64BitValueOf(sqInt oop);
