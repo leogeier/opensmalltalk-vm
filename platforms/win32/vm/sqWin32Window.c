@@ -71,9 +71,6 @@ void setFullScreenFlag(sqInt);
 sqInt getSavedWindowSize(void);
 extern sqInt deferDisplayUpdates;
 
-extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
-/* if sendWheelEvents is false this maps wheel events to arrow keys */
-
 /*** Variables -- image and path names ***/
 #define IMAGE_NAME_SIZE MAX_PATH_UTF8 
 
@@ -383,7 +380,7 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     mousePosition.y = GET_Y_LPARAM(lParam);
     break;
   case WM_MOUSEHWHEEL: {
-    if (inputSemaphoreIndex && sendWheelEvents) {
+    if (inputSemaphoreIndex && sendWheelEvents()) {
       int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
       /* accumulate enough delta before sending the event to the image */
       int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
@@ -413,7 +410,7 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     zDelta = vWheelDelta;
     vWheelDelta = 0;
     if (inputSemaphoreIndex) {
-      if (sendWheelEvents) {
+      if (sendWheelEvents()) {
         recordMouseWheelEvent(messageTouse,0,zDelta);
         break;   
       } else {
@@ -867,138 +864,8 @@ SetWindowTitle()
   SetWindowTextW(stWindow, wideTitle);
 }
 
-char *
-ioGetWindowLabel(void) { return windowTitle; }
-
-sqInt
-ioSetWindowLabelOfSize(void* lblIndex, sqInt sz)
-{
-  if (sz > MAX_PATH) sz = MAX_PATH;
-  memcpy(windowTitle, (void*)lblIndex, sz);
-  windowTitle[sz] = 0;
-  SetWindowTitle();
-  return 1;
-}
-
-sqInt
-ioGetWindowWidth(void)
-{
-  RECT r;
-  if (!IsWindow(stWindow)) return -1;
-  r.left = r.right = r.top = r.bottom = 0;
-  GetWindowRect(stWindow, &r);
-  return r.right - r.left;
-}
-
-sqInt
-ioGetWindowHeight(void)
-{
-  RECT r;
-  if (!IsWindow(stWindow)) return -1;
-  r.left = r.right = r.top = r.bottom = 0;
-  GetWindowRect(stWindow, &r);
-  return r.bottom - r.top;
-}
-
-sqInt
-ioSetWindowWidthHeight(sqInt w, sqInt h)
-{
-  RECT workArea, workArea2, old, shifted;
-  HMONITOR hMonitor;
-  MONITORINFO mi;
-  int left, top, width, height, maxWidth, maxHeight;
-
-  if (!IsWindow(stWindow)) return 0;
-  width = w;
-  height = h;
-
-  /* minimum size is 64 x 64 */
-  width  = ( width > 64) ?   width : 64;
-  height = (height > 64) ?  height : 64;
-
-  GetWindowRect(stWindow, &old);
-  GetWindowRect(stWindow, &shifted);
-
-  /* Work area of screen containing current window */
-  hMonitor = MonitorFromWindow (stWindow, MONITOR_DEFAULTTONEAREST);
-  mi.cbSize = (sizeof(mi));
-  GetMonitorInfo(hMonitor, &mi);
-  workArea = mi.rcWork;
-
-  /* Work area of screen containing target rectangle. */
-  shifted.bottom = (shifted.top + h);
-  shifted.right = (shifted.left + w);
-  hMonitor = MonitorFromRect (&shifted, MONITOR_DEFAULTTONEAREST);
-  mi.cbSize = (sizeof(mi));
-  GetMonitorInfo(hMonitor, &mi);
-  workArea2 = mi.rcWork;
-
-  /* If the second choice holds the target, use it, else use the more reliable window work area */
-  if ((workArea2.top <= shifted.top) && (workArea2.bottom >= shifted.bottom) 
-     && (workArea2.left <= shifted.left) && (workArea2.right >= shifted.right)) {
-	workArea = workArea2;
-  }
-  /* maximum size is working area */
-  maxWidth  = workArea.right - workArea.left;
-  maxHeight = workArea.bottom - workArea.top;
-
-  width  = (width <= maxWidth) ? width : maxWidth;
-  height = (height <= maxHeight) ? height : maxHeight;
-
-  /* We may have to center the window to fit on screen,
-     although if there is room, we retain the window's previous position. */
-  if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
-	  (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
-	left = old.left; 
-	top = old.top;
-  } else {
-    left = (workArea.left) + ((maxWidth-width) / 2);
-    top = (workArea.top) + ((maxHeight-height) / 2);
-  }
-  if ((old.left != left) || (old.top != top) || 
-	  (old.left - old.right != width) || (old.bottom - old.top != height)) {
-	  SetWindowPos(stWindow, NULL, left, top, width, height, SWP_NOZORDER);
-  }
-  return 1;
-
-}
-
 void *ioGetWindowHandle(void) { return stWindow; }
 __declspec(dllexport) void *getSTWindowHandle(void) { return stWindow; }
-
-sqInt
-ioIsWindowObscured(void)
-{
-  HWND hwnd;
-  RECT baseRect, hwndRect;
-
-  if (!IsWindow(stWindow)) return 1; /* not even a window */
-  if (IsIconic(stWindow)) return 1; /* minimized */
-
-  /* Check whether the window extends beyond the screen */
-  GetClientRect(stWindow, &baseRect);
-  MapWindowPoints(stWindow, NULL, (LPPOINT)(&baseRect), 2);
-  hwnd = GetDesktopWindow();
-  GetWindowRect(hwnd, &hwndRect);
-  if (baseRect.left   < hwndRect.left ||
-     baseRect.right  > hwndRect.right ||
-     baseRect.top    < hwndRect.top ||
-     baseRect.bottom > hwndRect.bottom) return 1; /* too big */
-
-  /* Check whether any windows in front of this window overlap */
-  hwnd = stWindow;
-  while ((hwnd = GetNextWindow(hwnd, GW_HWNDPREV))) {
-
-    if (!IsWindowVisible(hwnd)) continue; /* skip invisible windows */
-
-    GetWindowRect(hwnd, &hwndRect);
-    if (!(hwndRect.left >= baseRect.right ||
-	 baseRect.left >= hwndRect.right ||
-	 hwndRect.top >= baseRect.bottom ||
-	 baseRect.top >= hwndRect.bottom)) return 1; /* obscured */
-  }
-  return false; /* not obscured */
-}
 
 void
 SetupWindows()
@@ -2466,6 +2333,10 @@ ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if (lsbDisplay) depth = -depth;
+  /* Use sane default if image omits to provide depth in time. For example,
+   * exception while processing the StartUpList before #beDisplay is called.
+   */
+  if (depth == 0) depth = 32;
 
   bmi = BmiForDepth(depth);
   if (!bmi)

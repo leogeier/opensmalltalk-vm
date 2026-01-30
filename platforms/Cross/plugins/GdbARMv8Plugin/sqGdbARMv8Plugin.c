@@ -22,8 +22,6 @@
 #include <bfd.h>
 #include <disassemble.h>
 
-#include "sqSetjmpShim.h"
-
 struct sim_state *lastCPU = NULL;
 sim_cpu initialSimState = {0,};
 
@@ -154,6 +152,40 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 }
 
 /*
+ * Answer if a 64-bit performance counter is available, storing its value through
+ * the pointer if so.
+ */
+long
+performanceCounter64ofinto(void *cpup, uintptr_t *perfCounterp)
+{
+	sim_cpu *cpu = cpup;
+
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
+		return BadCPUInstance;
+
+	*perfCounterp = cpu->cntvct;
+
+	return 0;
+}
+
+/*
+ * Answer zero if the 64-bit performance counter could be incremented by increment.
+ * Answer an integer error code if and when something went awry (as specified above).
+ */
+long
+incrementPerformanceCounter64ofby(void *cpup, uintptr_t increment)
+{
+	sim_cpu *cpu = cpup;
+
+	if (!lastCPU || lastCPU->cpu[0] != cpu)
+		return BadCPUInstance;
+
+	cpu->cntvct += increment;
+
+	return 0;
+}
+
+/*
  * Currently a dummy for ARM Processor Alien.
  */
 void
@@ -243,6 +275,29 @@ storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 		registerState[n] = ((sim_cpu *)cpu)->gr[n].u64;
 	registerState[32] = ((sim_cpu *)cpu)->pc;
 	registerState[33] = ((sim_cpu *)cpu)->CPSR;
+}
+
+int
+fpRegHighTide(void *cpu)
+{
+	int i = 32; // num fp regs
+	FRegister *fpregs = &(((sim_cpu *)cpu)->fr[0]);
+
+	while (i > 0 && !fpregs[i-1].v[0]) --i;
+	return i;
+}
+
+void
+storeRegisterStateOfnfpinto(void *cpu, int nfpRegs, uint64_t *registerState)
+{
+	int n;
+
+	for (n = -1; ++n < 32;)
+		registerState[n] = ((sim_cpu *)cpu)->gr[n].u64;
+	registerState[32] = ((sim_cpu *)cpu)->pc;
+	registerState[33] = ((sim_cpu *)cpu)->CPSR;
+	for(n = -1; ++n < nfpRegs;)
+		registerState[n + 34] = ((sim_cpu *)cpu)->fr[n].v[0];
 }
 
 /* Adapted from sim/aarch64/memory.c -- Memory accessor functions for the AArch64 simulator
