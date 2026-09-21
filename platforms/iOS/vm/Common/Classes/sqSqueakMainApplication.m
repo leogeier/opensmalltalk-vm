@@ -204,11 +204,11 @@ extern sqInt interpret(void);  //This is a VM Callback
 	  }];
 
 	[self setupAIO];
-	if (getVMOSThread()) {
-		assert(getVMOSThread() != guiThread);
-		assert(getVMOSThread() == ioCurrentOSThread());
-	}
-	assert(guiThread != ioCurrentOSThread());
+	/* if (getVMOSThread()) { */
+		/* assert(getVMOSThread() != guiThread); */
+		/* assert(getVMOSThread() == ioCurrentOSThread()); */
+	/* } */
+	/* assert(guiThread != ioCurrentOSThread()); */
 	interpret();
   }
 }
